@@ -132,6 +132,7 @@ public class WPSProcess {
 
                 InputStream inStr = WPSProcess.class.getResourceAsStream("wpsRequestTemplate.xml");
                 String templ = IOUtils.toString(inStr);
+                templ = templ.replace("@id", id);
 
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < in.size(); i++) {
@@ -156,7 +157,7 @@ public class WPSProcess {
 
                 templ = templ.replace("@outputs", sb.toString());
                 FileUtils.write(File.createTempFile("toto-", ".xml"), templ);
-                HttpURLConnection c = (HttpURLConnection)new URL(host).openConnection();
+                HttpURLConnection c = (HttpURLConnection) new URL(host).openConnection();
 
                 c.setRequestProperty("Content-Type", "text/xml");
                 c.setDoOutput(true);
@@ -183,16 +184,14 @@ public class WPSProcess {
                                         for (int j = 1; j < pr.getLength() - 1; j += 2) {
                                                 Node p = pr.item(j);
                                                 if (testNode(p, "wps:Output")) {
-                                                        NodeList inputNodes = p.getChildNodes();
-                                                        for (int k = 1; k < inputNodes.getLength(); k += 2) {
-                                                                Element inp = (Element) inputNodes.item(k);
-                                                                String paramId = getTagValue("ows:Identifier", inp);
-                                                                String jsData = getTagValue("wps:Data", inp);
-                                                                File ft = File.createTempFile("gdms-wps-out", ".json");
-                                                                System.out.println(jsData);
-                                                                FileUtils.write(ft, jsData);
-                                                                jsonDatas.put(paramId, ft);
-                                                        }
+                                                        Element inp = (Element) p;
+                                                        String paramId = getTagValue("ows:Identifier", inp);
+                                                        String jsData = getTagValue("wps:Data", inp);
+                                                        File ft = File.createTempFile("gdms-wps-out", ".json");
+                                                        System.out.println(jsData);
+                                                        FileUtils.write(ft, jsData);
+                                                        jsonDatas.put(paramId, ft);
+
                                                 }
 
                                         }
@@ -203,12 +202,12 @@ public class WPSProcess {
                 } catch (ParserConfigurationException ex) {
                 } catch (SAXException ex) {
                 }
-                
+
                 List<File> orderedOut = new ArrayList<File>();
                 for (int i = 0; i < outputs.size(); i++) {
                         orderedOut.add(jsonDatas.get(outputs.get(i)));
                 }
-                
+
                 for (int i = 0; i < out.size(); i++) {
                         sm.importFrom(out.get(i), orderedOut.get(i));
                 }

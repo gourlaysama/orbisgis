@@ -36,10 +36,13 @@ import java.awt.event.KeyEvent;
 import java.beans.EventHandler;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import javax.swing.AbstractButton;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -58,16 +61,20 @@ import javax.swing.Timer;
 import javax.swing.event.CaretListener;
 import javax.swing.text.BadLocationException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.orbisgis.core.Services;
 import org.orbisgis.core.layerModel.MapContext;
 import org.orbisgis.sif.UIFactory;
+import org.orbisgis.sif.UIPanel;
 import org.orbisgis.sif.components.OpenFilePanel;
 import org.orbisgis.sif.components.SaveFilePanel;
 import org.orbisgis.view.background.BackgroundManager;
 import org.orbisgis.view.components.findReplace.FindReplaceDialog;
+import org.orbisgis.view.geocatalog.wps.ProcessConfigurationPanel;
+import org.orbisgis.view.geocatalog.wps.RunPanel;
 import org.orbisgis.view.icons.OrbisGISIcon;
 import org.orbisgis.view.sqlconsole.actions.ExecuteScriptProcess;
 import org.orbisgis.view.sqlconsole.blockComment.QuoteSQL;
@@ -222,7 +229,43 @@ public class SQLConsolePanel extends JPanel {
                         OrbisGISIcon.getIcon("builtinfunctionmap"),
                         EventHandler.create(ActionListener.class,sqlFunctionsPanel,"switchPanelVisibilityState"),
                         null));
+                //Post data through HTTP to a wms server
+                actions.add(new SQLConsoleAction(
+                        I18N.tr("Post data"),
+                        I18N.tr("Post data for WPS"),
+                        OrbisGISIcon.getIcon("builtinfunctionmap"),
+                        EventHandler.create(ActionListener.class,this,"postData"),
+                        null));
         }
+        
+        public void postData(){
+                RunPanel rp = new RunPanel();
+                ProcessConfigurationPanel layerConfiguration = new ProcessConfigurationPanel(rp);
+                PostDataDialog runPanel = new PostDataDialog(layerConfiguration,this);
+//                ProcessConfigurCationPanel layerConfiguration = new ProcessConfigurationPanel(runPanel);
+//                WPSConnectionPanel wpsConnection = new WPSConnectionPanel(layerConfiguration);
+                if (UIFactory.showDialog(new UIPanel[]{runPanel})){
+                    try {
+                        String host = runPanel.getClient().getHost();
+                        URL url = new URI(host).toURL();
+                        
+                        HttpURLConnection c = (HttpURLConnection)url.openConnection();
+                        c.setRequestProperty("Content-Type", "text/plain");
+                        c.setDoOutput(true);
+                        c.setRequestMethod("POST");
+                        IOUtils.write(getText(), c.getOutputStream());
+                        c.getOutputStream().close();
+                        LOGGER.error("Our wonderful response code : " + c.getResponseCode());
+                    } catch (URISyntaxException ex) {
+                        LOGGER.error("Problem with the URI : \n", ex);
+                    } catch (MalformedURLException ex) {
+                        LOGGER.error("Problem with the URI transformation : \n", ex);
+                    } catch (IOException ex) {
+                        LOGGER.error("Problem while sending the POST message : \n", ex);
+                    }
+                }
+        }
+        
         /**
          * Return a set of button to control the sql panel features
          * 

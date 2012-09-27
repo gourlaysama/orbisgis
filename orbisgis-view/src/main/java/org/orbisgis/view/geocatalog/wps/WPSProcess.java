@@ -1,6 +1,7 @@
 package org.orbisgis.view.geocatalog.wps;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -131,38 +132,44 @@ public class WPSProcess {
                 SourceManager sm = Services.getService(DataManager.class).getSourceManager();
 
                 InputStream inStr = WPSProcess.class.getResourceAsStream("wpsRequestTemplate.xml");
-                String templ = IOUtils.toString(inStr);
-                templ = templ.replace("@id", id);
-
-                StringBuilder sb = new StringBuilder();
+                String[] templ = IOUtils.toString(inStr).split("@");
+                File treq = File.createTempFile("gdms-t-req", ".xml");
+                FileOutputStream rstr = new FileOutputStream(treq);
+                IOUtils.write(templ[0], rstr);
+                IOUtils.write(id, rstr);
+                IOUtils.write(templ[1], rstr);
                 for (int i = 0; i < in.size(); i++) {
                         File f = File.createTempFile("wps-in", ".json");
                         sm.exportTo(in.get(i), f);
                         String json = FileUtils.readFileToString(f);
 
 
-                        sb.append("<wps:Input><ows:Identifier>").append(inputs.get(i));
-                        sb.append("</ows:Identifier><wps:Data><wps:ComplexData>");
-                        sb.append(json);
-                        sb.append("</wps:ComplexData></wps:Data></wps:Input>").append('\n');
+                        IOUtils.write("<wps:Input><ows:Identifier>", rstr);
+                        IOUtils.write(inputs.get(i), rstr);
+                        IOUtils.write("</ows:Identifier><wps:Data><wps:ComplexData>", rstr);
+                        IOUtils.write(json, rstr);
+                        IOUtils.write("</wps:ComplexData></wps:Data></wps:Input>", rstr);
+                        IOUtils.write("\n", rstr);
 
                 }
-                templ = templ.replace("@inputs", sb.toString());
+               IOUtils.write(templ[2], rstr);
 
-                sb = new StringBuilder();
                 for (int i = 0; i < outputs.size(); i++) {
-                        sb.append("<wps:Output><ows:Identifier>").append(outputs.get(i));
-                        sb.append("</ows:Identifier></wps:Output>\n");
+                        IOUtils.write("<wps:Output><ows:Identifier>", rstr);
+                        IOUtils.write(outputs.get(i), rstr);
+                        IOUtils.write("</ows:Identifier></wps:Output>\n", rstr);
                 }
 
-                templ = templ.replace("@outputs", sb.toString());
-                FileUtils.write(File.createTempFile("toto-", ".xml"), templ);
+                IOUtils.write(templ[3], rstr);
+                rstr.flush();
+                rstr.close();
+                
                 HttpURLConnection c = (HttpURLConnection) new URL(host).openConnection();
 
                 c.setRequestProperty("Content-Type", "text/xml");
                 c.setDoOutput(true);
                 c.setRequestMethod("POST");
-                IOUtils.write(templ, c.getOutputStream());
+                FileUtils.copyFile(treq, c.getOutputStream());
                 c.getOutputStream().close();
                 c.connect();
                 System.out.println(c.getResponseMessage());
@@ -188,7 +195,6 @@ public class WPSProcess {
                                                         String paramId = getTagValue("ows:Identifier", inp);
                                                         String jsData = getTagValue("wps:Data", inp);
                                                         File ft = File.createTempFile("gdms-wps-out", ".json");
-                                                        System.out.println(jsData);
                                                         FileUtils.write(ft, jsData);
                                                         jsonDatas.put(paramId, ft);
 

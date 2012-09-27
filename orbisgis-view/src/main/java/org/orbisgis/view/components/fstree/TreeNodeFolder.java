@@ -38,7 +38,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,12 +46,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.TransferHandler.TransferSupport;
 import javax.swing.tree.MutableTreeNode;
-import javax.swing.tree.TreeNode;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.orbisgis.sif.UIFactory;
 import org.orbisgis.sif.common.MenuCommonFunctions;
-import org.orbisgis.view.components.resourceTree.EnumIterator;
 import org.orbisgis.view.icons.OrbisGISIcon;
 import org.xnap.commons.i18n.I18n;
 import org.xnap.commons.i18n.I18nFactory;
@@ -62,8 +59,7 @@ import org.xnap.commons.i18n.I18nFactory;
  * Represent a folder in the file system.
  * @author Nicolas Fortin
  */
-public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, TreeNodePath, DropDestinationTreeNode, DragTreeNode {
-        private List<MutableTreeNode> children = new ArrayList<MutableTreeNode>();
+public class TreeNodeFolder extends AbstractTreeNodeContainer implements PopupTreeNode, TreeNodePath, DropDestinationTreeNode, DragTreeNode {
         private File folderPath;
         private static final Logger LOGGER = Logger.getLogger("gui." + TreeNodeFolder.class);
         private static final I18n I18N = I18nFactory.getI18n(TreeNodeFolder.class);
@@ -82,6 +78,15 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                 }
                 setLabel(folderPath.getName());
         }
+
+        @Override
+        public void setParent(MutableTreeNode mtn) {
+                super.setParent(mtn);
+                // Only sub folder can be renamed
+                setEditable(mtn instanceof TreeNodeFolder);
+        }
+        
+        
         /**
          * Read the file system and insert the new files and folders
          */
@@ -93,7 +98,7 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                         LOGGER.error(I18N.tr("Cannot list the directory content"),ex);
                         return;
                 }
-                // Find deleted sub-elements 
+                // Find deleted sub-elements, and update existing sub-folders 
                 List<MutableTreeNode> childrenToRemove = new ArrayList<MutableTreeNode>(children.size());
                 for(MutableTreeNode child : children) {
                         if(child instanceof TreeNodePath) {
@@ -103,6 +108,9 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                                         childrenToRemove.add(child);
                                 } else {
                                         fsList.remove(childFileName);
+                                        if(child instanceof TreeNodeFolder) {
+                                                ((TreeNodeFolder)child).updateTree();
+                                        }
                                 }
                         }
                 }
@@ -110,7 +118,7 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                 for(MutableTreeNode child : childrenToRemove) {
                         model.removeNodeFromParent(child);
                 }
-                // Add the new children
+                // Add the new children, and update new sub-folders 
                 for(String childPath : fsList) {
                         File newChild = new File(getFilePath(), childPath);
                         if (newChild.isDirectory()) {
@@ -124,28 +132,7 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                                 }
                         }
                 }
-        }
-        
-        private void internalInsert(AbstractTreeNode mtn, int i) {
-                children.add(i, mtn);
-                mtn.setParent(this);
-                mtn.setModel(model);
-        }
-
-        @Override
-        public void insert(MutableTreeNode mtn, int i) {
-                internalInsert((AbstractTreeNode)mtn,i);
-        }
-
-        @Override
-        public void remove(int i) {
-                children.remove(i);
-        }
-
-        @Override
-        public void remove(MutableTreeNode mtn) {
-                children.remove(mtn);
-        }
+        }        
 
         @Override
         public void setUserObject(Object o) {
@@ -164,36 +151,6 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                 }
         }
         
-        @Override
-        public TreeNode getChildAt(int i) {
-                return children.get(i);
-        }
-
-        @Override
-        public int getChildCount() {
-                return children.size();
-        }
-
-        @Override
-        public int getIndex(TreeNode tn) {
-                return children.indexOf(tn);
-        }
-
-        @Override
-        public boolean getAllowsChildren() {
-                return true;
-        }
-
-        @Override
-        public boolean isLeaf() {
-                return false;
-        }
-
-        @Override
-        public Enumeration<MutableTreeNode> children() {
-                return new EnumIterator<MutableTreeNode>(children.iterator());
-        }
-
         /**
          * File&Folder deletion
          */
@@ -247,7 +204,7 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                 JMenuItem updateMenu = new JMenuItem(I18N.tr("Update"),
                         OrbisGISIcon.getIcon("arrow_refresh"));
                 updateMenu.setToolTipText(I18N.tr("Update the content of this folder from the file system"));
-                updateMenu.setActionCommand("TreeNodeFolder:Update");
+                updateMenu.setActionCommand("Update");
                 updateMenu.addActionListener(
                         EventHandler.create(ActionListener.class,
                         this, "updateTree"));
@@ -271,7 +228,7 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
                         folderRemove.addActionListener(
                         EventHandler.create(ActionListener.class,
                         this, "onDeleteFolder"));
-                        MenuCommonFunctions.updateOrInsertMenuItem(menu,folderRemove);
+                        MenuCommonFunctions.updateOrInsertMenuItem(menu,folderRemove,true);
                 }
         }
 
@@ -279,7 +236,7 @@ public class TreeNodeFolder extends AbstractTreeNode implements PopupTreeNode, T
          * Create a sub folder, the folder name is given through an input dialog
          */
         public void onNewSubFolder() {                
-                String folderName = JOptionPane.showInputDialog(UIFactory.getMainFrame(), I18N.tr("Enter the folder name"), "Folder");
+                String folderName = JOptionPane.showInputDialog(UIFactory.getMainFrame(), I18N.tr("Enter the folder name"), I18N.tr("Folder"));
                 if(folderName!=null) {
                         File newFolderPath = new File(getFilePath(),folderName);
                         try {

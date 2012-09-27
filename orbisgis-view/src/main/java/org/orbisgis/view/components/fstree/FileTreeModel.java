@@ -26,45 +26,40 @@
  * or contact directly:
  * info_at_ orbisgis.org
  */
-package org.orbisgis.view.map;
+package org.orbisgis.view.components.fstree;
 
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.io.IOException;
-import org.orbisgis.view.edition.TransferableEditableElement;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.MutableTreeNode;
+import javax.swing.tree.TreeNode;
 
 /**
- * Transfer of a MapElement
+ *
  * @author Nicolas Fortin
  */
-public class TransferableMap implements Transferable {
-        
-	public final static DataFlavor mapFlavor = new DataFlavor(MapElement.class,
-			"EditableMap");
-        private MapElement mapElement;
+public class FileTreeModel extends DefaultTreeModel {
+        private static final long serialVersionUID = 1L;
 
-        protected TransferableMap() {
-                
-        }
-        public TransferableMap(MapElement mapElement) {
-                this.mapElement = mapElement;
-        }
-        
-        
-        @Override
-        public DataFlavor[] getTransferDataFlavors() {
-                return new DataFlavor[]{mapFlavor, TransferableEditableElement.editableElementFlavor};
+        public FileTreeModel(TreeNode tn) {
+                super(tn);
         }
 
-        @Override
-        public boolean isDataFlavorSupported(DataFlavor df) {
-                return df.equals(mapFlavor) || df.equals(TransferableEditableElement.editableElementFlavor);
+        public FileTreeModel(TreeNode tn, boolean bln) {
+                super(tn, bln);
         }
 
+        /**
+         * Register the tree model to this node
+         * @param newChild
+         * @param parent
+         * @param i 
+         */
         @Override
-        public Object getTransferData(DataFlavor df) throws UnsupportedFlavorException, IOException {
-                return new MapElement[] {mapElement};
+        public void insertNodeInto(MutableTreeNode newChild, MutableTreeNode parent, int i) {
+                super.insertNodeInto(newChild, parent, i);
+                if(newChild instanceof AbstractTreeNode) {
+                        ((AbstractTreeNode)newChild).setModel(this);
+                }
         }
+
         
 }

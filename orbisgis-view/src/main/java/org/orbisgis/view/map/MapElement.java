@@ -78,22 +78,28 @@ public final class MapElement extends EditableElement {
         }       
         
         /**
+         * Set this element as modified
+         */
+        public void setModified() {
+                setModified(true);
+        }
+        
+        /**
          * Update the modified state
          * @param modified 
          */
         public void setModified(Boolean modified) {
             this.modified = modified;
         }
-
-        /**
-         * Call setModified(true);
-         */
-        public void setModified() {
-                setModified(true);
-        }
+        
 	@Override
 	public void save() throws UnsupportedOperationException {
                 try {
+                        //Create folders if needed
+                        File parentFolder = mapContextFile.getParentFile();
+                        if(!parentFolder.exists()) {
+                                parentFolder.mkdirs();
+                        }
                         mapContext.write(new FileOutputStream(mapContextFile));
                 } catch (FileNotFoundException ex) {
                         throw new UnsupportedOperationException(ex);

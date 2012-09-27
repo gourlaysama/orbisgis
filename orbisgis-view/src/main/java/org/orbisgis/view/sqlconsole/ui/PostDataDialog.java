@@ -32,24 +32,19 @@ public class PostDataDialog extends JPanel implements UIPanel {
     private I18n I18N = I18nFactory.getI18n(PostDataDialog.class);
     private String script;
     private JComboBox cmbURLServer;
-    private WPSClient client;
-    private ProcessConfigurationPanel processConfigurationPanel;
-    private static final String WPSServerFile = "wpsServerList.txt";
-    private ArrayList<String> serverswps;
 
-    public PostDataDialog(ProcessConfigurationPanel processConfigurationPanel, SQLConsolePanel scp) {
+    public PostDataDialog(String script) {
         super();
-        this.processConfigurationPanel = processConfigurationPanel;
-        script = scp.getText();
+        this.script = script;
         initialize();
     }
 
     public String getScript() {
         return script;
     }
-
-    public WPSClient getClient() {
-        return client;
+    
+    public String getUrl() {
+            return cmbURLServer.getSelectedItem().toString().trim();
     }
 
     private void initialize() {
@@ -67,138 +62,13 @@ public class PostDataDialog extends JPanel implements UIPanel {
         pnlURL.setBorder(BorderFactory.createTitledBorder(I18N.tr("WPS server URL")));
         pnlURL.setBorder(BorderFactory.createTitledBorder(I18N.tr("WPS server URL")));
 
-        serverswps = loadWPSServers();
-        cmbURLServer = new JComboBox(serverswps.toArray(new String[serverswps.size()]));
+        cmbURLServer = new JComboBox();
         cmbURLServer.setEditable(true);
         cmbURLServer.setMaximumSize(new Dimension(100, 20));
 
         pnlURL.add(cmbURLServer, BorderLayout.NORTH);
-        JToolBar wmsBtnManager = new JToolBar();
-        wmsBtnManager.setFloatable(false);
-        wmsBtnManager.setOpaque(false);
-
-        JButton btnConnect = new JButton(OrbisGISIcon.getIcon("server_connect"));
-        btnConnect.setToolTipText(I18N.tr("Connect to the server."));
-        btnConnect.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                connect();
-            }
-        });
-        btnConnect.setBorderPainted(false);
-
-        JButton btnDelete = new JButton(OrbisGISIcon.getIcon("remove"));
-        btnDelete.setToolTipText(I18N.tr("Delete the server connection."));
-        btnDelete.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String item = cmbURLServer.getSelectedItem().toString();
-                if (serverswps.contains(item)) {
-                    serverswps.remove(item);
-                    saveWPSServerFile();
-                }
-                cmbURLServer.removeItem(item);
-            }
-        });
-        btnDelete.setBorderPainted(false);
-
-        JButton btnUpdate = new JButton(OrbisGISIcon.getIcon("arrow_refresh"));
-        btnUpdate.setToolTipText(I18N.tr("Reload the server connection."));
-        btnUpdate.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-
-                try {
-                    ArrayList<String> updateServersList = readWPSServerFile(WPSConnectionPanel.class.getResourceAsStream(WPSServerFile));
-
-                    for (String updatewms : updateServersList) {
-                        if (!serverswps.contains(updatewms)) {
-                            serverswps.add(updatewms);
-                            cmbURLServer.addItem(updatewms);
-                        }
-                    }
-                    saveWPSServerFile();
-                } catch (IOException e1) {
-                    LOGGER.error(I18N.tr("Cannot update and save the URL list"), e1);
-                }
-
-            }
-        });
-        btnUpdate.setBorderPainted(false);
-
-        wmsBtnManager.add(btnConnect);
-        wmsBtnManager.add(btnDelete);
-        wmsBtnManager.add(btnUpdate);
-        pnlURL.add(wmsBtnManager, BorderLayout.SOUTH);
         this.add(pnlURL, c);
 
-    }
-
-    /**
-     * A method to save the list of WMS url in a file located in the current
-     * OrbisGIS workspace.
-     */
-    public void saveWPSServerFile() {
-        try {
-            CoreWorkspace ws = Services.getService(CoreWorkspace.class);
-            File file = new File(ws.getWorkspaceFolder() + File.separator + WPSServerFile);
-            PrintWriter pw = new PrintWriter(file);
-            for (String server : serverswps) {
-                pw.println(server);
-            }
-            pw.close();
-        } catch (FileNotFoundException e) {
-            LOGGER.error(I18N.tr("Cannot save the list of WPS url"));
-        }
-    }
-
-    /**
-     * When the user click on the connect button a background job is started to
-     * display some informations about the WMS server.
-     */
-    private void connect() {
-        BackgroundManager bm = Services.getService(BackgroundManager.class);
-        bm.backgroundOperation(new BackgroundJob() {
-
-            @Override
-            public void run(ProgressMonitor pm) {
-                String url = cmbURLServer.getSelectedItem().toString().trim();
-                try {
-                    getWPSClient(url);
-                    processConfigurationPanel.initialize();
-                } catch (IOException ex) {
-                    LOGGER.error(
-                            I18N.tr("orbisgis.errorMessages.wms.CannotGetCapabilities"
-                            + " " + url), ex);
-                }
-                processConfigurationPanel.initialize();
-            }
-
-            @Override
-            public String getTaskName() {
-                return I18N.tr("Connecting to the server...");
-            }
-        });
-    }
-
-    /**
-     * Return a WMSClient corresponding to a URL.
-     *
-     * @param host
-     * @return
-     * @throws ConnectException
-     * @throws IOException
-     */
-    public WPSClient getWPSClient(String host) throws IOException {
-        if (client == null) {
-            client = new WPSClient(host);
-            processConfigurationPanel.setClient(client);
-            return client;
-        }
-        return client;
     }
 
     @Override
@@ -213,9 +83,6 @@ public class PostDataDialog extends JPanel implements UIPanel {
 
     @Override
     public String validateInput() {
-        if (client == null) {
-            return "Can't connect to the server";
-        }
         return null;
     }
 
@@ -231,46 +98,6 @@ public class PostDataDialog extends JPanel implements UIPanel {
      * @return
      */
     private ArrayList<String> loadWPSServers() {
-        CoreWorkspace ws = Services.getService(CoreWorkspace.class);
-        File file = new File(ws.getWorkspaceFolder() + File.separator + WPSServerFile);
-        try {
-            if (file.exists()) {
-                return readWPSServerFile(new FileInputStream(file));
-            } else {
-                //return readWPSServerFile(WPSConnectionPanel.class.getResourceAsStream(WPSServerFile));
-                return new ArrayList<String>();
-            }
-        } catch (IOException e) {
-            LOGGER.error(I18N.tr("Cannot load the list of WMS url"), e);
-        }
-
-        return null;
-    }
-
-    /**
-     * Read the wms servers file list to populate the combobox
-     *
-     * @param layoutStream
-     * @return
-     * @throws IOException
-     */
-    private ArrayList<String> readWPSServerFile(InputStream layoutStream)
-            throws IOException {
-        ArrayList<String> serversList = new ArrayList<String>();
-        BufferedReader bufferedReader = new BufferedReader(
-                new InputStreamReader(layoutStream));
-
-        String str;
-        while ((str = bufferedReader.readLine()) != null) {
-            if (str.length() > 0) {
-                if (!serversList.contains(str)) {
-                    serversList.add(str);
-                }
-            }
-        }
-        bufferedReader.close();
-        layoutStream.close();
-
-        return serversList;
+        return new ArrayList<String>();
     }
 }

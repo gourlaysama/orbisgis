@@ -239,14 +239,10 @@ public class SQLConsolePanel extends JPanel {
         }
         
         public void postData(){
-                RunPanel rp = new RunPanel();
-                ProcessConfigurationPanel layerConfiguration = new ProcessConfigurationPanel(rp);
-                PostDataDialog runPanel = new PostDataDialog(layerConfiguration,this);
-//                ProcessConfigurCationPanel layerConfiguration = new ProcessConfigurationPanel(runPanel);
-//                WPSConnectionPanel wpsConnection = new WPSConnectionPanel(layerConfiguration);
+                PostDataDialog runPanel = new PostDataDialog(getText());
                 if (UIFactory.showDialog(new UIPanel[]{runPanel})){
                     try {
-                        String host = runPanel.getClient().getHost();
+                        String host = runPanel.getUrl();
                         URL url = new URI(host).toURL();
                         
                         HttpURLConnection c = (HttpURLConnection)url.openConnection();
@@ -255,7 +251,7 @@ public class SQLConsolePanel extends JPanel {
                         c.setRequestMethod("POST");
                         IOUtils.write(getText(), c.getOutputStream());
                         c.getOutputStream().close();
-                        LOGGER.error("Our wonderful response code : " + c.getResponseCode());
+                        LOGGER.info("Our wonderful response code : " + c.getResponseCode());
                     } catch (URISyntaxException ex) {
                         LOGGER.error("Problem with the URI : \n", ex);
                     } catch (MalformedURLException ex) {

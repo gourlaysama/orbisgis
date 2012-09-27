@@ -249,8 +249,8 @@ public class SQLConsolePanel extends JPanel {
                         String host = runPanel.getClient().getHost();
                         URL url = new URI(host).toURL();
                         
-                        HttpURLConnection c = (HttpURLConnection)new URL(host).openConnection();
-                        c.setRequestProperty("Content-Type", "text/xml");
+                        HttpURLConnection c = (HttpURLConnection)url.openConnection();
+                        c.setRequestProperty("Content-Type", "text/plain");
                         c.setDoOutput(true);
                         c.setRequestMethod("POST");
                         IOUtils.write(getText(), c.getOutputStream());

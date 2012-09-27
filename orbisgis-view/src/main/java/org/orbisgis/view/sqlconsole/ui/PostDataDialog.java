@@ -35,7 +35,6 @@ public class PostDataDialog extends JPanel implements UIPanel {
     private WPSClient client;
     private ProcessConfigurationPanel processConfigurationPanel;
     private static final String WPSServerFile = "wpsServerList.txt";
-    private JTextField jtf;
     private ArrayList<String> serverswps;
 
     public PostDataDialog(ProcessConfigurationPanel processConfigurationPanel, SQLConsolePanel scp) {
@@ -136,14 +135,6 @@ public class PostDataDialog extends JPanel implements UIPanel {
         pnlURL.add(wmsBtnManager, BorderLayout.SOUTH);
         this.add(pnlURL, c);
 
-
-        jtf = new JTextField();
-        JLabel jc = new JLabel(I18N.tr("Script name : "));
-        this.add(new JLabel("Server address : "));
-        this.add(cmbURLServer);
-        this.add(jc);
-        this.add(jtf);
-
     }
 
     /**
@@ -222,9 +213,6 @@ public class PostDataDialog extends JPanel implements UIPanel {
 
     @Override
     public String validateInput() {
-        if (jtf.getText() == null || jtf.getText().trim().isEmpty()) {
-            return "You must provide a script name";
-        }
         if (client == null) {
             return "Can't connect to the server";
         }

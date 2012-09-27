@@ -95,10 +95,10 @@ public class WPSClient {
                                 Node n = els.item(i);
                                 if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("wps:ProcessOfferings")) {
                                         NodeList pr = n.getChildNodes();
-                                        for (int j = 0; j < pr.getLength() - 1; j+=2) {
-                                                Node p = els.item(i);
+                                        for (int j = 1; j < pr.getLength() - 1; j++) {
+                                                Node p = pr.item(j);
                                                 if (p.getNodeType() == Node.ELEMENT_NODE) {
-                                                        Element e = (Element) n;
+                                                        Element e = (Element) p;
                                                         String id = getTagValue("ows:Identifier", e);
                                                         String title = getTagValue("ows:Title", e);
                                                         String abstractText = getTagValue("ows:Abstract", e);

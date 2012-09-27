@@ -33,8 +33,10 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.beans.EventHandler;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.logging.Level;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import org.apache.commons.io.FilenameUtils;
@@ -79,10 +81,19 @@ import org.orbisgis.view.geocatalog.sourceWizards.db.TableImportPanel;
 import org.orbisgis.view.geocatalog.sourceWizards.wms.LayerConfigurationPanel;
 import org.orbisgis.view.geocatalog.sourceWizards.wms.SRSPanel;
 import org.orbisgis.view.geocatalog.sourceWizards.wms.WMSConnectionPanel;
+import org.orbisgis.view.geocatalog.wps.ProcessConfigurationPanel;
+import org.orbisgis.view.geocatalog.wps.RunPanel;
+import org.orbisgis.view.geocatalog.wps.WPSClient;
+import org.orbisgis.view.geocatalog.wps.WPSConnectionPanel;
+import org.orbisgis.view.geocatalog.wps.WPSProcess;
 import org.orbisgis.view.icons.OrbisGISIcon;
 import org.orbisgis.view.table.TableEditableElement;
 import org.xnap.commons.i18n.I18n;
 import org.xnap.commons.i18n.I18nFactory;
+
+import org.gdms.data.DataSourceCreationException;
+import org.gdms.data.NoSuchTableException;
+import org.gdms.driver.DriverException;
 
 /**
  * This is the GeoCatalog panel. That Panel show the list of available
@@ -462,6 +473,32 @@ public class Catalog extends JPanel implements DockingPanel {
                         }
                 }
         }
+        
+        public void onMenuAddWPSServer() {
+                RunPanel runPanel = new RunPanel();
+                ProcessConfigurationPanel layerConfiguration = new ProcessConfigurationPanel(runPanel);
+                WPSConnectionPanel wpsConnection = new WPSConnectionPanel(layerConfiguration);
+                if (UIFactory.showDialog(new UIPanel[]{wpsConnection,
+                                layerConfiguration, runPanel})) {
+                        List<String> in = runPanel.getInputs();
+                        List<String> out = runPanel.getOutputs();
+                        WPSClient client = wpsConnection.getWPSClient();
+
+                        Object[] layers = layerConfiguration.getSelectedLayers();
+                        WPSProcess p = (WPSProcess) layers[0];
+                        try {
+                                p.execute(client.getHost(), in, out);
+                        } catch (IOException ex) {
+                                LOGGER.error(ex);
+                        } catch (DriverException ex) {
+                                LOGGER.error(ex);
+                        } catch (NoSuchTableException ex) {
+                                LOGGER.error(ex);
+                        } catch (DataSourceCreationException ex) {
+                                LOGGER.error(ex);
+                        }
+                }
+        }
 
         /**
          * the method that actually process the content of a directory, or a
@@ -531,6 +568,15 @@ public class Catalog extends JPanel implements DockingPanel {
                 addFileItem.addActionListener(EventHandler.create(ActionListener.class,
                         this,
                         "onMenuAddWMSServer"));
+                addMenu.add(addFileItem);
+                
+                //Add the server panel
+                addFileItem = new JMenuItem(
+                        I18N.tr("WPS server"),
+                        OrbisGISIcon.getIcon("server_connect"));
+                addFileItem.addActionListener(EventHandler.create(ActionListener.class,
+                        this,
+                        "onMenuAddWPSServer"));
                 addMenu.add(addFileItem);
 
 

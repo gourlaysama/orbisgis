@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -193,11 +195,10 @@ public class WPSProcess {
                                                 if (testNode(p, "wps:Output")) {
                                                         Element inp = (Element) p;
                                                         String paramId = getTagValue("ows:Identifier", inp);
-                                                        String jsData = getTagValue("wps:Data", inp);
-                                                        File ft = File.createTempFile("gdms-wps-out", ".json");
-                                                        FileUtils.write(ft, jsData);
+                                                        String url = inp.getElementsByTagName("wps:Reference").item(0).getAttributes().getNamedItem("href").getTextContent();
+                                                        File ft = File.createTempFile("gdms-down-", ".json");
+                                                        FileUtils.copyURLToFile(new URI(host).resolve(url).toURL(), ft);
                                                         jsonDatas.put(paramId, ft);
-
                                                 }
 
                                         }
@@ -207,6 +208,7 @@ public class WPSProcess {
                 } catch (IOException ex) {
                 } catch (ParserConfigurationException ex) {
                 } catch (SAXException ex) {
+                } catch (URISyntaxException ex) {
                 }
 
                 List<File> orderedOut = new ArrayList<File>();
